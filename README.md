@@ -167,30 +167,369 @@ game-cms/
 
 ## 🚀 部署说明
 
-### 生产环境部署
+### VPS服务器部署（完整指南）
 
-1. **设置环境变量**
+#### 1. 服务器环境准备
+
+**系统要求**
+- Ubuntu 20.04+ / CentOS 7+
+- Node.js 18+
+- PM2 进程管理器
+- Nginx 反向代理
+
+**安装Node.js**
 ```bash
-# .env 文件
-ADMIN_PASSWORD=your_secure_password
-NODE_ENV=production
+# Ubuntu/Debian
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# CentOS/RHEL
+curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+sudo yum install -y nodejs
 ```
 
-2. **构建项目**
+**安装PM2**
+```bash
+sudo npm install -g pm2
+```
+
+**安装Nginx**
+```bash
+# Ubuntu/Debian
+sudo apt update
+sudo apt install nginx
+
+# CentOS/RHEL
+sudo yum install epel-release
+sudo yum install nginx
+```
+
+#### 2. 部署应用
+
+**克隆项目**
+```bash
+cd /var/www/
+sudo git clone https://github.com/imowen/game-cms.git
+sudo chown -R $USER:$USER game-cms
+cd game-cms
+```
+
+**安装依赖**
+```bash
+npm install
+```
+
+**配置环境变量**
+```bash
+cp .env.example .env
+nano .env
+```
+
+在.env文件中设置：
+```bash
+# 管理员密码
+ADMIN_PASSWORD=your_secure_password_here
+
+# 生产环境
+NODE_ENV=production
+
+# 应用端口
+PORT=3000
+```
+
+**构建项目**
 ```bash
 npm run build
 ```
 
-3. **启动生产服务**
+#### 3. PM2配置
+
+**创建PM2配置文件**
 ```bash
-npm start
+nano ecosystem.config.js
 ```
 
-### 推荐部署平台
-- Vercel（推荐）
-- Netlify
-- Railway
-- 自建服务器
+配置内容：
+```javascript
+module.exports = {
+  apps: [
+    {
+      name: 'game-cms',
+      script: 'npm',
+      args: 'start',
+      cwd: '/var/www/game-cms',
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '1G',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3000
+      },
+      log_file: '/var/log/pm2/game-cms.log',
+      out_file: '/var/log/pm2/game-cms-out.log',
+      error_file: '/var/log/pm2/game-cms-error.log'
+    }
+  ]
+};
+```
+
+**启动应用**
+```bash
+# 创建日志目录
+sudo mkdir -p /var/log/pm2
+
+# 启动应用
+pm2 start ecosystem.config.js
+
+# 保存PM2配置
+pm2 save
+
+# 设置开机自启
+pm2 startup
+```
+
+#### 4. Nginx配置
+
+**创建Nginx配置文件**
+```bash
+sudo nano /etc/nginx/sites-available/game-cms
+```
+
+配置内容：
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com www.your-domain.com;
+
+    # 安全头
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer-when-downgrade" always;
+
+    # 游戏iframe支持
+    add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline' 'unsafe-eval'; frame-src *;";
+
+    # 主应用代理
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # 静态文件缓存
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+        proxy_pass http://localhost:3000;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # 数据库文件保护
+    location ~ /games\.db$ {
+        deny all;
+        return 404;
+    }
+}
+```
+
+**启用站点**
+```bash
+sudo ln -s /etc/nginx/sites-available/game-cms /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+#### 5. SSL证书配置（可选但推荐）
+
+**安装Certbot**
+```bash
+# Ubuntu/Debian
+sudo apt install certbot python3-certbot-nginx
+
+# CentOS/RHEL
+sudo yum install certbot python3-certbot-nginx
+```
+
+**获取SSL证书**
+```bash
+sudo certbot --nginx -d your-domain.com -d www.your-domain.com
+```
+
+#### 6. 防火墙配置
+
+```bash
+# UFW (Ubuntu)
+sudo ufw allow 22
+sudo ufw allow 80
+sudo ufw allow 443
+sudo ufw enable
+
+# FirewallD (CentOS)
+sudo firewall-cmd --permanent --add-service=ssh
+sudo firewall-cmd --permanent --add-service=http
+sudo firewall-cmd --permanent --add-service=https
+sudo firewall-cmd --reload
+```
+
+#### 7. 数据库备份脚本
+
+**创建备份脚本**
+```bash
+nano ~/backup-gamedb.sh
+```
+
+脚本内容：
+```bash
+#!/bin/bash
+DATE=$(date +%Y%m%d_%H%M%S)
+BACKUP_DIR="/var/backups/game-cms"
+DB_PATH="/var/www/game-cms/games.db"
+
+# 创建备份目录
+mkdir -p $BACKUP_DIR
+
+# 备份数据库
+cp $DB_PATH $BACKUP_DIR/games_${DATE}.db
+
+# 保留最近30天的备份
+find $BACKUP_DIR -name "games_*.db" -mtime +30 -delete
+
+echo "Database backup completed: games_${DATE}.db"
+```
+
+**设置执行权限并添加定时任务**
+```bash
+chmod +x ~/backup-gamedb.sh
+
+# 添加到crontab（每天凌晨3点备份）
+crontab -e
+# 添加这行：
+# 0 3 * * * /home/your-username/backup-gamedb.sh
+```
+
+#### 8. 监控和日志
+
+**查看应用状态**
+```bash
+# PM2状态
+pm2 status
+pm2 logs game-cms
+
+# 系统资源监控
+pm2 monit
+```
+
+**Nginx日志**
+```bash
+# 访问日志
+sudo tail -f /var/log/nginx/access.log
+
+# 错误日志
+sudo tail -f /var/log/nginx/error.log
+```
+
+#### 9. 更新部署
+
+**创建更新脚本**
+```bash
+nano ~/update-game-cms.sh
+```
+
+脚本内容：
+```bash
+#!/bin/bash
+cd /var/www/game-cms
+
+echo "Pulling latest changes..."
+git pull origin main
+
+echo "Installing dependencies..."
+npm install
+
+echo "Building application..."
+npm run build
+
+echo "Restarting PM2 application..."
+pm2 restart game-cms
+
+echo "Update completed!"
+```
+
+**使用方法**
+```bash
+chmod +x ~/update-game-cms.sh
+./update-game-cms.sh
+```
+
+### Docker部署（可选）
+
+**创建Dockerfile**
+```dockerfile
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --only=production
+
+COPY . .
+RUN npm run build
+
+EXPOSE 3000
+
+CMD ["npm", "start"]
+```
+
+**Docker Compose**
+```yaml
+version: '3.8'
+services:
+  game-cms:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - ADMIN_PASSWORD=your_secure_password
+    volumes:
+      - ./games.db:/app/games.db
+    restart: unless-stopped
+```
+
+### 云平台部署
+
+#### Vercel部署（推荐）
+1. Fork项目到你的GitHub
+2. 在Vercel导入项目
+3. 设置环境变量：`ADMIN_PASSWORD`
+4. 自动部署完成
+
+#### Railway部署
+1. 连接GitHub仓库
+2. 设置环境变量
+3. 自动构建和部署
+
+### 性能优化建议
+
+1. **启用Gzip压缩**
+```nginx
+gzip on;
+gzip_vary on;
+gzip_min_length 1024;
+gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
+```
+
+2. **设置适当的缓存策略**
+3. **使用CDN加速静态资源**
+4. **定期监控服务器资源使用情况**
+5. **设置日志轮转避免磁盘空间不足**
 
 ## 📊 数据库结构
 
