@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase, Game } from '@/lib/database';
+import { getDatabase, Game, generateUniqueSlug } from '@/lib/database';
 
 export async function GET(
   request: NextRequest,
@@ -35,11 +35,21 @@ export async function PUT(
     const { id } = await params;
     const db = await getDatabase();
     const game: Game = await request.json();
-    
+
+    // 处理url_slug更新
+    let url_slug = game.url_slug;
+    if (!url_slug) {
+      // 如果没有提供slug，从名称生成
+      url_slug = await generateUniqueSlug(game.name, parseInt(id));
+    } else {
+      // 如果提供了slug，确保它是唯一的
+      url_slug = await generateUniqueSlug(url_slug, parseInt(id));
+    }
+
     await db.run(`
-      UPDATE games 
-      SET name = ?, description = ?, game_url = ?, thumbnail_url = ?, 
-          category_id = ?, size_width = ?, size_height = ?, rating = ?, platform = ?,
+      UPDATE games
+      SET name = ?, description = ?, game_url = ?, thumbnail_url = ?,
+          category_id = ?, url_slug = ?, size_width = ?, size_height = ?, rating = ?, platform = ?,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `, [
@@ -48,14 +58,19 @@ export async function PUT(
       game.game_url,
       game.thumbnail_url || null,
       game.category_id || null,
+      url_slug,
       game.size_width || 800,
       game.size_height || 600,
       game.rating || 0,
       game.platform || '未知',
       id
     ]);
-    
-    return NextResponse.json({ success: true, message: 'Game updated successfully' });
+
+    return NextResponse.json({
+      success: true,
+      url_slug: url_slug,
+      message: 'Game updated successfully'
+    });
   } catch (error) {
     console.error('Error updating game:', error);
     return NextResponse.json({ error: 'Failed to update game' }, { status: 500 });

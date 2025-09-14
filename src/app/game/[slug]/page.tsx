@@ -6,8 +6,8 @@ import Head from 'next/head';
 import { use } from 'react';
 import { usePageView, gameEvents } from '@/components/Analytics';
 
-export default function GamePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function GamePage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = use(params);
   const [game, setGame] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -19,7 +19,7 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
   useEffect(() => {
     const fetchGame = async () => {
       try {
-        const response = await fetch(`/api/games/${id}`);
+        const response = await fetch(`/api/games/by-slug/${slug}`);
         if (!response.ok) {
           throw new Error('Game not found');
         }
@@ -50,11 +50,11 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
       }
     };
 
-    if (id) {
+    if (slug) {
       fetchGame();
     }
     checkAuth();
-  }, [id]);
+  }, [slug]);
 
   if (loading) {
     return (

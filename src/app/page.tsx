@@ -54,9 +54,17 @@ export default function HomePage() {
     try {
       const response = await fetch('/api/categories');
       const data = await response.json();
-      setCategories(data || []);
+
+      // 确保data是数组且不是错误对象
+      if (Array.isArray(data)) {
+        setCategories(data);
+      } else {
+        console.error('Categories data is not an array:', data);
+        setCategories([]);
+      }
     } catch (error) {
       console.error('Error fetching categories:', error);
+      setCategories([]);
     }
   };
 
@@ -202,7 +210,7 @@ export default function HomePage() {
               {games.map((game) => (
                 <Link
                   key={game.id}
-                  href={`/game/${game.id}`}
+                  href={`/game/${game.url_slug || game.id}`}
                   onClick={() => {
                     // 游戏点击事件跟踪
                     gameEvents.gameClick(game.id.toString(), game.name);

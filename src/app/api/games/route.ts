@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase, Game } from '@/lib/database';
+import { getDatabase, Game, generateUniqueSlug } from '@/lib/database';
 
 export async function GET(request: NextRequest) {
   try {
@@ -72,15 +72,23 @@ export async function POST(request: NextRequest) {
   try {
     const db = await getDatabase();
     const game: Game = await request.json();
-    
+
     // 生成namespace如果没有提供
     if (!game.namespace) {
       game.namespace = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     }
-    
+
+    // 生成url_slug如果没有提供
+    if (!game.url_slug) {
+      game.url_slug = await generateUniqueSlug(game.name);
+    } else {
+      // 验证提供的slug是否唯一
+      game.url_slug = await generateUniqueSlug(game.url_slug);
+    }
+
     const result = await db.run(`
-      INSERT INTO games (name, description, game_url, thumbnail_url, category_id, namespace, size_width, size_height, rating, platform)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO games (name, description, game_url, thumbnail_url, category_id, namespace, url_slug, size_width, size_height, rating, platform)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       game.name,
       game.description || null,
@@ -88,16 +96,18 @@ export async function POST(request: NextRequest) {
       game.thumbnail_url || null,
       game.category_id || null,
       game.namespace,
+      game.url_slug,
       game.size_width || 800,
       game.size_height || 600,
       game.rating || 0,
       game.platform || '未知'
     ]);
-    
-    return NextResponse.json({ 
-      success: true, 
+
+    return NextResponse.json({
+      success: true,
       id: result.lastID,
-      message: 'Game created successfully' 
+      url_slug: game.url_slug,
+      message: 'Game created successfully'
     });
   } catch (error) {
     console.error('Error creating game:', error);

@@ -25,6 +25,7 @@ export default function AdminPage() {
     game_url: '',
     thumbnail_url: '',
     category_id: undefined,
+    url_slug: '',
     size_width: 800,
     size_height: 600,
     rating: 0,
@@ -170,6 +171,7 @@ export default function AdminPage() {
           game_url: '',
           thumbnail_url: '',
           category_id: undefined,
+          url_slug: '',
           size_width: 800,
           size_height: 600,
           rating: 0,
@@ -658,6 +660,20 @@ export default function AdminPage() {
                     placeholder="https://example.com/game"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    URL标识符 (SEO友好链接)
+                  </label>
+                  <input
+                    type="text"
+                    value={newGame.url_slug}
+                    onChange={(e) => setNewGame({...newGame, url_slug: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="如：super-mario 或留空自动生成"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">用于生成SEO友好的URL，如 /game/super-mario。留空将根据游戏名称自动生成。</p>
+                </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -807,6 +823,20 @@ export default function AdminPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="https://example.com/game"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    URL标识符 (SEO友好链接)
+                  </label>
+                  <input
+                    type="text"
+                    value={editingGame.url_slug || ''}
+                    onChange={(e) => setEditingGame({...editingGame, url_slug: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="如：super-mario 或留空自动生成"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">用于生成SEO友好的URL，如 /game/super-mario。留空将根据游戏名称自动生成。</p>
                 </div>
                 
                 <div>
