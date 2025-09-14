@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Category } from '@/lib/database';
+import { usePageView, gameEvents } from '@/components/Analytics';
 
 export default function HomePage() {
   const [games, setGames] = useState<any[]>([]);
@@ -12,6 +13,9 @@ export default function HomePage() {
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+
+  // 页面浏览统计
+  usePageView();
 
   const fetchGames = async () => {
     setLoading(true);
@@ -26,9 +30,19 @@ export default function HomePage() {
       
       const response = await fetch(`/api/games?${params}`);
       const data = await response.json();
-      
+
       setGames(data.games || []);
       setTotalPages(data.pagination?.totalPages || 1);
+
+      // 搜索事件跟踪
+      if (searchTerm) {
+        gameEvents.search(searchTerm, data.games?.length || 0);
+      }
+
+      // 分页事件跟踪
+      if (currentPage > 1) {
+        gameEvents.pagination(currentPage, data.pagination?.totalPages || 1);
+      }
     } catch (error) {
       console.error('Error fetching games:', error);
     } finally {
@@ -119,7 +133,11 @@ export default function HomePage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div className="flex flex-wrap gap-3">
               <button
-                onClick={() => setSelectedCategory('')}
+                onClick={() => {
+                  setSelectedCategory('');
+                  // 全部分类事件跟踪
+                  gameEvents.categoryFilter('全部', '');
+                }}
                 className={`game-badge transition-all ${
                   selectedCategory === ''
                     ? 'bg-gradient-to-r from-orange-400 to-orange-600 shadow-lg'
@@ -142,7 +160,12 @@ export default function HomePage() {
                 return (
                   <button
                     key={cat.id}
-                    onClick={() => setSelectedCategory(cat.id?.toString() || '')}
+                    onClick={() => {
+                      const categoryId = cat.id?.toString() || '';
+                      setSelectedCategory(categoryId);
+                      // 分类筛选事件跟踪
+                      gameEvents.categoryFilter(cat.name, categoryId);
+                    }}
                     className={`game-badge transition-all ${isSelected ? 'shadow-lg' : ''}`}
                     style={{
                       background: isSelected
@@ -177,7 +200,14 @@ export default function HomePage() {
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {games.map((game) => (
-                <Link key={game.id} href={`/game/${game.id}`}>
+                <Link
+                  key={game.id}
+                  href={`/game/${game.id}`}
+                  onClick={() => {
+                    // 游戏点击事件跟踪
+                    gameEvents.gameClick(game.id.toString(), game.name);
+                  }}
+                >
                   <div className="game-card cursor-pointer group">
                     <div className="aspect-square bg-gradient-to-br from-orange-50 to-pink-50 relative overflow-hidden rounded-t-xl">
                       <img

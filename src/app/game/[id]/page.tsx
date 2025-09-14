@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Head from 'next/head';
 import { use } from 'react';
+import { usePageView, gameEvents } from '@/components/Analytics';
 
 export default function GamePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -11,6 +12,9 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // 页面浏览统计
+  usePageView();
 
   useEffect(() => {
     const fetchGame = async () => {
@@ -21,6 +25,15 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
         }
         const gameData = await response.json();
         setGame(gameData);
+
+        // 游戏开始事件跟踪
+        if (gameData) {
+          gameEvents.gameStart(
+            gameData.id.toString(),
+            gameData.name,
+            gameData.category_name
+          );
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load game');
       } finally {
