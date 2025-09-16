@@ -341,3 +341,58 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to create game' }, { status: 500 });
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    // 获取客户端IP
+    const forwarded = request.headers.get('x-forwarded-for');
+    const ip = forwarded ? forwarded.split(',')[0] : request.headers.get('x-real-ip') || 'unknown';
+
+    // 检查频率限制
+    const rateLimitCheck = checkRateLimit(ip);
+    if (!rateLimitCheck.allowed) {
+      console.log(`Rate limit exceeded for IP: ${ip}`);
+      return NextResponse.json({
+        error: rateLimitCheck.reason
+      }, { status: 429 });
+    }
+
+    // 验证管理员身份
+    const isAuthorized = await verifyAdminAuth(request);
+    if (!isAuthorized) {
+      return NextResponse.json({ error: 'Unauthorized access' }, { status: 401 });
+    }
+
+    const { ids } = await request.json();
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json({ error: 'Invalid game IDs provided' }, { status: 400 });
+    }
+
+    // 验证所有ID都是数字
+    const validIds = ids.filter(id => Number.isInteger(Number(id)));
+    if (validIds.length !== ids.length) {
+      return NextResponse.json({ error: 'All IDs must be valid integers' }, { status: 400 });
+    }
+
+    const db = await getDatabase();
+
+    // 创建占位符字符串 (?, ?, ?)
+    const placeholders = validIds.map(() => '?').join(', ');
+
+    // 批量删除游戏
+    const result = await db.run(
+      `DELETE FROM games WHERE id IN (${placeholders})`,
+      validIds
+    );
+
+    return NextResponse.json({
+      success: true,
+      deletedCount: result.changes,
+      message: `Successfully deleted ${result.changes} game(s)`
+    });
+  } catch (error) {
+    console.error('Error deleting games:', error);
+    return NextResponse.json({ error: 'Failed to delete games' }, { status: 500 });
+  }
+}

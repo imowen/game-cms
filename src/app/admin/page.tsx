@@ -32,6 +32,8 @@ export default function AdminPage() {
     platform: '未知',
     status: 'published'
   });
+  const [selectedGames, setSelectedGames] = useState<Set<number>>(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchGames = async () => {
     setLoading(true);
@@ -159,7 +161,7 @@ export default function AdminPage() {
 
   const handleDelete = async (id: number) => {
     if (!confirm('确定要删除这个游戏吗？')) return;
-    
+
     try {
       const response = await fetch(`/api/games/${id}`, {
         method: 'DELETE',
@@ -173,6 +175,65 @@ export default function AdminPage() {
       }
     } catch (error) {
       console.error('Error deleting game:', error);
+    }
+  };
+
+  // 批量选择功能
+  const toggleGameSelection = (gameId: number) => {
+    const newSelection = new Set(selectedGames);
+    if (newSelection.has(gameId)) {
+      newSelection.delete(gameId);
+    } else {
+      newSelection.add(gameId);
+    }
+    setSelectedGames(newSelection);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedGames.size === games.length) {
+      setSelectedGames(new Set());
+    } else {
+      setSelectedGames(new Set(games.map(game => game.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedGames.size === 0) {
+      alert('请先选择要删除的游戏');
+      return;
+    }
+
+    if (!confirm(`确定要删除选中的 ${selectedGames.size} 个游戏吗？此操作无法撤销。`)) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch('/api/games', {
+        method: 'DELETE',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ids: Array.from(selectedGames)
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        alert(`成功删除 ${result.deletedCount} 个游戏`);
+        setSelectedGames(new Set());
+        fetchGames();
+      } else {
+        alert(`删除失败: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error bulk deleting games:', error);
+      alert('删除操作失败，请检查网络连接');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -348,6 +409,27 @@ export default function AdminPage() {
               >
                 添加游戏
               </button>
+              {selectedGames.size > 0 && (
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={isDeleting}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isDeleting ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      删除中...
+                    </>
+                  ) : (
+                    <>
+                      🗑️ 批量删除 ({selectedGames.size})
+                    </>
+                  )}
+                </button>
+              )}
               <button
                 onClick={() => window.open('/', '_blank')}
                 className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 flex items-center gap-2"
@@ -403,6 +485,14 @@ export default function AdminPage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <input
+                        type="checkbox"
+                        checked={games.length > 0 && selectedGames.size === games.length}
+                        onChange={toggleSelectAll}
+                        className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                      />
+                    </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       游戏
                     </th>
@@ -432,19 +522,27 @@ export default function AdminPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {loading ? (
                     <tr>
-                      <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan={9} className="px-6 py-4 text-center text-gray-500">
                         加载中...
                       </td>
                     </tr>
                   ) : games.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan={9} className="px-6 py-4 text-center text-gray-500">
                         暂无游戏数据
                       </td>
                     </tr>
                   ) : (
                     games.map((game) => (
                       <tr key={game.id} className="hover:bg-gray-50">
+                        <td className="px-3 py-4">
+                          <input
+                            type="checkbox"
+                            checked={selectedGames.has(game.id)}
+                            onChange={() => toggleGameSelection(game.id)}
+                            className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                          />
+                        </td>
                         <td className="px-4 py-4">
                           <div className="flex items-center min-w-0">
                             <div className="flex-shrink-0 h-10 w-10">
@@ -559,6 +657,14 @@ export default function AdminPage() {
                 {games.map((game) => (
                   <div key={game.id} className="p-4">
                     <div className="flex items-start space-x-4">
+                      <div className="flex-shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={selectedGames.has(game.id)}
+                          onChange={() => toggleGameSelection(game.id)}
+                          className="rounded border-gray-300 text-orange-600 focus:ring-orange-500 mt-1"
+                        />
+                      </div>
                       <div className="flex-shrink-0">
                         <img
                           className="h-16 w-16 rounded-lg object-cover"
