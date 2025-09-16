@@ -60,21 +60,24 @@ jobs:
             echo "📥 Pulling latest code..."
             git pull origin main
 
-            # 安装依赖
-            echo "📦 Installing dependencies..."
+            # 清理并重新安装依赖
+            echo "📦 Reinstalling dependencies..."
+            rm -rf node_modules
             npm ci
 
             # 运行数据库迁移
             echo "🗄️ Running database migration..."
             npm run migrate
 
-            # 清理构建缓存
-            echo "🧹 Clearing build cache..."
+            # 清理所有缓存
+            echo "🧹 Clearing all caches..."
             rm -rf .next
+            rm -rf node_modules/.cache
+            rm -rf .next/cache
 
             # 构建项目
             echo "🏗️ Building project..."
-            npm run build
+            NODE_ENV=production npm run build
 
             # 重启PM2进程（强制清理）
             echo "🔄 Restarting PM2 process..."
