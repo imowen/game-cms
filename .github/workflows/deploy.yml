@@ -90,8 +90,8 @@ jobs:
             # 检查应用状态
             echo "🔍 Checking application status..."
             sleep 5
-            if curl -f http://localhost:3000 > /dev/null 2>&1; then
-              echo "✅ Deployment successful! Game CMS is running."
+            if curl -f http://localhost:3001 > /dev/null 2>&1; then
+              echo "✅ Deployment successful! Game CMS is running on port 3001."
             else
               echo "❌ Deployment failed! Application not responding."
               pm2 logs game-cms --lines 20
