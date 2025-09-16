@@ -56,8 +56,9 @@ jobs:
               exit 1
             }
 
-            # 拉取最新代码
+            # 强制拉取最新代码
             echo "📥 Pulling latest code..."
+            git reset --hard HEAD
             git pull origin main
 
             # 清理并重新安装依赖
@@ -82,6 +83,8 @@ jobs:
             # 重启PM2进程（强制清理）
             echo "🔄 Restarting PM2 process..."
             pm2 delete game-cms || true
+            pkill -f "/data/www/ggame.ee.*next" || true
+            sleep 2
             pm2 start npm --name "game-cms" -- start
 
             # 保存PM2配置

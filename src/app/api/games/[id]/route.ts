@@ -49,7 +49,7 @@ export async function PUT(
     await db.run(`
       UPDATE games
       SET name = ?, description = ?, game_url = ?, thumbnail_url = ?,
-          category_id = ?, url_slug = ?, size_width = ?, size_height = ?, rating = ?, platform = ?,
+          category_id = ?, url_slug = ?, size_width = ?, size_height = ?, rating = ?, platform = ?, status = ?,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `, [
@@ -63,6 +63,7 @@ export async function PUT(
       game.size_height || 600,
       game.rating || 0,
       game.platform || '未知',
+      game.status || 'published',
       id
     ]);
 
