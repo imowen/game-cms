@@ -29,7 +29,8 @@ export default function AdminPage() {
     size_width: 800,
     size_height: 600,
     rating: 0,
-    platform: '未知'
+    platform: '未知',
+    status: 'published'
   });
 
   const fetchGames = async () => {
@@ -320,6 +321,15 @@ export default function AdminPage() {
                 添加游戏
               </button>
               <button
+                onClick={() => window.open('/', '_blank')}
+                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+                预览网站
+              </button>
+              <button
                 onClick={handleLogout}
                 className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center gap-2"
               >
@@ -420,12 +430,24 @@ export default function AdminPage() {
                               <div className="text-sm font-medium text-gray-900 truncate max-w-[200px]">
                                 {game.name}
                               </div>
-                              <div className="text-sm text-gray-500 truncate max-w-[200px]">
-                                {game.description ? 
-                                  (game.description.length > 30 ? 
-                                    `${game.description.substring(0, 30)}...` : 
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                  game.status === 'published' || !game.status
+                                    ? 'bg-green-100 text-green-800'
+                                    : game.status === 'draft'
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : 'bg-red-100 text-red-800'
+                                }`}>
+                                  {game.status === 'published' || !game.status ? '🟢 已发布' :
+                                   game.status === 'draft' ? '🟡 草稿' : '🔴 已归档'}
+                                </span>
+                              </div>
+                              <div className="text-sm text-gray-500 truncate max-w-[200px] mt-1">
+                                {game.description ?
+                                  (game.description.length > 30 ?
+                                    `${game.description.substring(0, 30)}...` :
                                     game.description
-                                  ) : 
+                                  ) :
                                   '无描述'
                                 }
                               </div>
@@ -457,15 +479,28 @@ export default function AdminPage() {
                         <td className="px-3 py-4 text-sm text-gray-500">
                           {new Date(game.created_at).toLocaleDateString('zh-CN')}
                         </td>
-                        <td className="px-4 py-4 text-sm font-medium w-24">
+                        <td className="px-4 py-4 text-sm font-medium w-32">
                           <div className="flex flex-col space-y-1">
-                            <button 
+                            <button
                               onClick={() => handleEditGame(game)}
                               className="text-blue-600 hover:text-blue-900 text-left"
                             >
                               编辑
                             </button>
-                            <button 
+                            <button
+                              onClick={() => {
+                                if (game.url_slug) {
+                                  window.open(`/game/${game.url_slug}`, '_blank');
+                                } else {
+                                  alert('游戏URL Slug为空，无法预览');
+                                }
+                              }}
+                              disabled={!game.url_slug}
+                              className="text-purple-600 hover:text-purple-900 text-left disabled:text-gray-400 disabled:cursor-not-allowed"
+                            >
+                              预览
+                            </button>
+                            <button
                               onClick={() => handleDelete(game.id)}
                               className="text-red-600 hover:text-red-900 text-left"
                             >
@@ -506,9 +541,21 @@ export default function AdminPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between">
                           <div className="min-w-0 flex-1">
-                            <h3 className="text-sm font-medium text-gray-900 truncate">
-                              {game.name}
-                            </h3>
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-sm font-medium text-gray-900 truncate">
+                                {game.name}
+                              </h3>
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                game.status === 'published' || !game.status
+                                  ? 'bg-green-100 text-green-800'
+                                  : game.status === 'draft'
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {game.status === 'published' || !game.status ? '🟢 已发布' :
+                                 game.status === 'draft' ? '🟡 草稿' : '🔴 已归档'}
+                              </span>
+                            </div>
                             <p className="text-sm text-gray-500 mt-1 line-clamp-2">
                               {game.description || '无描述'}
                             </p>
@@ -530,13 +577,26 @@ export default function AdminPage() {
                             </div>
                           </div>
                           <div className="flex flex-col space-y-2 ml-4">
-                            <button 
+                            <button
                               onClick={() => handleEditGame(game)}
                               className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
                             >
                               编辑
                             </button>
-                            <button 
+                            <button
+                              onClick={() => {
+                                if (game.url_slug) {
+                                  window.open(`/game/${game.url_slug}`, '_blank');
+                                } else {
+                                  alert('游戏URL Slug为空，无法预览');
+                                }
+                              }}
+                              disabled={!game.url_slug}
+                              className="px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                            >
+                              预览
+                            </button>
+                            <button
                               onClick={() => handleDelete(game.id)}
                               className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200"
                             >
@@ -791,22 +851,63 @@ export default function AdminPage() {
                     placeholder="如：Steam、PlayStation、自制等"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    发布状态 *
+                  </label>
+                  <select
+                    value={newGame.status || 'published'}
+                    onChange={(e) => setNewGame({...newGame, status: e.target.value as 'published' | 'draft' | 'archived'})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="published">🟢 立即发布</option>
+                    <option value="draft">🟡 保存为草稿</option>
+                    <option value="archived">🔴 归档</option>
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    立即发布：在网站首页可见 | 保存为草稿：仅管理员可见 | 归档：隐藏游戏
+                  </p>
+                </div>
               </div>
               
-              <div className="flex justify-end space-x-3 mt-6">
+              <div className="flex justify-between items-center mt-6">
                 <button
                   type="button"
-                  onClick={() => setShowAddForm(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  onClick={() => {
+                    if (newGame.name && newGame.game_url) {
+                      // 生成临时预览URL（基于游戏名称）
+                      const tempSlug = newGame.url_slug || newGame.name.toLowerCase().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-');
+                      window.open(`/game/${tempSlug}?preview=true`, '_blank');
+                    } else {
+                      alert('请先填写游戏名称和游戏URL再预览');
+                    }
+                  }}
+                  disabled={!newGame.name || !newGame.game_url}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-md text-sm font-medium hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  取消
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  预览游戏
                 </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
-                >
-                  添加游戏
-                </button>
+
+                <div className="flex space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddForm(false)}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    取消
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
+                  >
+                    {newGame.status === 'draft' ? '保存草稿' : '添加游戏'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
@@ -955,25 +1056,64 @@ export default function AdminPage() {
                     placeholder="如：Steam、PlayStation、自制等"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    发布状态 *
+                  </label>
+                  <select
+                    value={editingGame.status || 'published'}
+                    onChange={(e) => setEditingGame({...editingGame, status: e.target.value as 'published' | 'draft' | 'archived'})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="published">🟢 已发布</option>
+                    <option value="draft">🟡 草稿</option>
+                    <option value="archived">🔴 已归档</option>
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    已发布：在网站首页可见 | 草稿：仅管理员可见 | 已归档：隐藏游戏
+                  </p>
+                </div>
               </div>
               
-              <div className="flex justify-end space-x-3 mt-6">
+              <div className="flex justify-between items-center mt-6">
                 <button
                   type="button"
                   onClick={() => {
-                    setShowEditForm(false);
-                    setEditingGame(null);
+                    if (editingGame.url_slug) {
+                      window.open(`/game/${editingGame.url_slug}`, '_blank');
+                    } else {
+                      alert('游戏URL Slug为空，无法预览');
+                    }
                   }}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  disabled={!editingGame.url_slug}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-md text-sm font-medium hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  取消
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  预览游戏
                 </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
-                >
-                  保存修改
-                </button>
+
+                <div className="flex space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEditForm(false);
+                      setEditingGame(null);
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    取消
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
+                  >
+                    {editingGame.status === 'draft' ? '保存草稿' : '保存修改'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

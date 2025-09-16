@@ -125,6 +125,13 @@ export async function getDatabase(): Promise<Database> {
     console.log('Slug migration skipped:', error);
   }
 
+  // 添加status列到现有表中（如果不存在）
+  try {
+    await db.run('ALTER TABLE games ADD COLUMN status TEXT DEFAULT "published"');
+  } catch (error) {
+    // 列已存在，忽略错误
+  }
+
   // 插入默认分类
   await db.run(`
     INSERT OR IGNORE INTO categories (name, color) VALUES 
@@ -151,6 +158,7 @@ export interface Game {
   size_height?: number;
   rating?: number;
   platform?: string;
+  status?: 'published' | 'draft' | 'archived';
   is_active?: boolean;
   created_at?: string;
   updated_at?: string;

@@ -14,10 +14,10 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * limit;
     
     let query = `
-      SELECT g.*, c.name as category_name, c.color as category_color 
-      FROM games g 
-      LEFT JOIN categories c ON g.category_id = c.id 
-      WHERE g.is_active = 1
+      SELECT g.*, c.name as category_name, c.color as category_color
+      FROM games g
+      LEFT JOIN categories c ON g.category_id = c.id
+      WHERE g.is_active = 1 AND (g.status = 'published' OR g.status IS NULL)
     `;
     
     const params: any[] = [];
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     const games = await db.all(query, params);
     
     // 获取总数
-    let countQuery = 'SELECT COUNT(*) as total FROM games WHERE is_active = 1';
+    let countQuery = 'SELECT COUNT(*) as total FROM games WHERE is_active = 1 AND (status = "published" OR status IS NULL)';
     const countParams: any[] = [];
     
     if (category) {
@@ -87,8 +87,8 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await db.run(`
-      INSERT INTO games (name, description, game_url, thumbnail_url, category_id, namespace, url_slug, size_width, size_height, rating, platform)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO games (name, description, game_url, thumbnail_url, category_id, namespace, url_slug, size_width, size_height, rating, platform, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       game.name,
       game.description || null,
@@ -100,7 +100,8 @@ export async function POST(request: NextRequest) {
       game.size_width || 800,
       game.size_height || 600,
       game.rating || 0,
-      game.platform || '未知'
+      game.platform || '未知',
+      game.status || 'published'
     ]);
 
     return NextResponse.json({
