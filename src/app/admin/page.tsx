@@ -8,7 +8,7 @@ export default function AdminPage() {
   const [authLoading, setAuthLoading] = useState(true);
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
-  const [games, setGames] = useState<any[]>([]);
+  const [games, setGames] = useState<Game[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -18,7 +18,7 @@ export default function AdminPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [showImportForm, setShowImportForm] = useState(false);
-  const [editingGame, setEditingGame] = useState<any>(null);
+  const [editingGame, setEditingGame] = useState<Game | null>(null);
   const [newGame, setNewGame] = useState<Partial<Game>>({
     name: '',
     description: '',
@@ -215,7 +215,7 @@ export default function AdminPage() {
     }
   };
 
-  const handleEditGame = (game: any) => {
+  const handleEditGame = (game: Game) => {
     setEditingGame(game);
     setShowEditForm(true);
   };

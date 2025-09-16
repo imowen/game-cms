@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
           return NextResponse.json({ authenticated: true });
         }
       }
-    } catch (e) {
+    } catch {
       // Token无效
     }
     

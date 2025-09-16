@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     const categoryMap = new Map(categories.map(c => [c.name.toLowerCase(), c.id]));
     
     for (let i = 0; i < parsed.data.length; i++) {
-      const row = parsed.data[i] as any;
+      const row = parsed.data[i] as Record<string, string | number>;
       
       try {
         // 验证必需字段
