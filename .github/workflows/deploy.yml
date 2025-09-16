@@ -68,13 +68,18 @@ jobs:
             echo "🗄️ Running database migration..."
             npm run migrate
 
+            # 清理构建缓存
+            echo "🧹 Clearing build cache..."
+            rm -rf .next
+
             # 构建项目
             echo "🏗️ Building project..."
             npm run build
 
-            # 重启PM2进程
+            # 重启PM2进程（强制清理）
             echo "🔄 Restarting PM2 process..."
-            pm2 restart game-cms || pm2 start npm --name "game-cms" -- start
+            pm2 delete game-cms || true
+            pm2 start npm --name "game-cms" -- start
 
             # 保存PM2配置
             pm2 save
