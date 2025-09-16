@@ -61,8 +61,11 @@ export async function getDatabase(): Promise<Database> {
     return db;
   }
 
+  // 使用环境变量或默认路径
+  const dbPath = process.env.DATABASE_URL || path.join(process.cwd(), 'games.db');
+
   db = await open({
-    filename: path.join(process.cwd(), 'games.db'),
+    filename: dbPath,
     driver: sqlite3.Database
   });
 

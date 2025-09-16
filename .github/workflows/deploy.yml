@@ -56,6 +56,15 @@ jobs:
               exit 1
             }
 
+            # 备份数据库文件
+            echo "💾 Backing up database..."
+            if [ -f "games.db" ]; then
+              cp games.db games.db.backup.$(date +%Y%m%d_%H%M%S)
+              echo "✅ Database backed up successfully"
+            else
+              echo "⚠️  No existing database found, will create new one"
+            fi
+
             # 强制拉取最新代码
             echo "📥 Pulling latest code..."
             git reset --hard HEAD
@@ -64,6 +73,16 @@ jobs:
               git log --oneline -3
               echo "Continuing with existing code..."
             }
+
+            # 恢复数据库文件
+            echo "🔄 Restoring database..."
+            LATEST_BACKUP=$(ls -t games.db.backup.* 2>/dev/null | head -1)
+            if [ -n "$LATEST_BACKUP" ] && [ -f "$LATEST_BACKUP" ]; then
+              cp "$LATEST_BACKUP" games.db
+              echo "✅ Database restored from backup: $LATEST_BACKUP"
+            else
+              echo "⚠️  No backup found, database will be recreated"
+            fi
 
             # 清理并重新安装依赖
             echo "📦 Reinstalling dependencies..."
@@ -107,6 +126,11 @@ jobs:
               pm2 logs game-cms --lines 20
               exit 1
             fi
+
+            # 清理旧的数据库备份文件（保留最近5个）
+            echo "🧹 Cleaning up old database backups..."
+            ls -t games.db.backup.* 2>/dev/null | tail -n +6 | xargs -r rm -f
+            echo "✅ Backup cleanup completed"
 
       - name: 📧 Notify on success
         if: success()

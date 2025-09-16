@@ -7,8 +7,9 @@ async function migrate() {
 
   try {
     // 连接数据库
+    const dbPath = process.env.DATABASE_URL || path.join(process.cwd(), 'games.db');
     const db = await open({
-      filename: path.join(process.cwd(), 'games.db'),
+      filename: dbPath,
       driver: sqlite3.Database
     });
 
