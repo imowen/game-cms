@@ -59,7 +59,11 @@ jobs:
             # 强制拉取最新代码
             echo "📥 Pulling latest code..."
             git reset --hard HEAD
-            git pull origin main
+            git pull origin main || {
+              echo "⚠️  Git pull failed, checking current status..."
+              git log --oneline -3
+              echo "Continuing with existing code..."
+            }
 
             # 清理并重新安装依赖
             echo "📦 Reinstalling dependencies..."

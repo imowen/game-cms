@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       WHERE g.is_active = 1 AND (g.status = 'published' OR g.status IS NULL)
     `;
     
-    const params: any[] = [];
+    const params: (string | number)[] = [];
     
     if (category) {
       query += ' AND g.category_id = ?';
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     
     // 获取总数
     let countQuery = 'SELECT COUNT(*) as total FROM games WHERE is_active = 1 AND (status = "published" OR status IS NULL)';
-    const countParams: any[] = [];
+    const countParams: (string | number)[] = [];
     
     if (category) {
       countQuery += ' AND category_id = ?';
