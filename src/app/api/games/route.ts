@@ -41,36 +41,64 @@ function checkRateLimit(ip: string): { allowed: boolean; reason?: string } {
   return { allowed: true };
 }
 
-// 检查Referer和User-Agent
-function checkLegitimateAccess(request: NextRequest): { allowed: boolean; reason?: string } {
+// 检查是否为内部访问
+function checkInternalAccess(request: NextRequest): { allowed: boolean; reason?: string } {
   const referer = request.headers.get('referer');
   const userAgent = request.headers.get('user-agent');
   const host = request.headers.get('host');
+  const xRequestedWith = request.headers.get('x-requested-with');
 
-  // 检查User-Agent，阻止明显的爬虫
+  // 必须有Referer头且来自本站
+  if (!referer) {
+    return { allowed: false, reason: 'Direct API access not allowed. Access must be from website pages.' };
+  }
+
+  // 验证referer必须来自本站
+  const allowedDomains = ['ggame.ee', 'localhost'];
+  let isValidReferer = false;
+
+  try {
+    const refererDomain = new URL(referer).hostname;
+    isValidReferer = allowedDomains.some(domain =>
+      refererDomain === domain || refererDomain.endsWith('.' + domain)
+    );
+  } catch {
+    return { allowed: false, reason: 'Invalid referer format' };
+  }
+
+  if (!isValidReferer) {
+    return { allowed: false, reason: 'External access not permitted. API only available to internal pages.' };
+  }
+
+  // 检查User-Agent，必须像浏览器
   if (!userAgent || userAgent.length < 10) {
     return { allowed: false, reason: 'Invalid user agent' };
   }
 
-  // 阻止常见的爬虫User-Agent
+  // 阻止常见的爬虫和API工具
   const botPatterns = [
     /bot/i, /crawl/i, /spider/i, /scrape/i, /wget/i, /curl/i,
-    /python/i, /java/i, /go-http/i, /postman/i, /insomnia/i
+    /python/i, /java/i, /go-http/i, /postman/i, /insomnia/i,
+    /axios/i, /fetch/i, /http/i, /request/i, /client/i
   ];
 
   if (botPatterns.some(pattern => pattern.test(userAgent))) {
     return { allowed: false, reason: 'Automated access detected' };
   }
 
-  // 对于非本站的referer，进行额外检查
-  if (referer && !referer.includes(host || 'ggame.ee')) {
-    // 允许空referer（直接访问）但限制外站referer
-    const allowedDomains = ['ggame.ee', 'localhost'];
-    const refererDomain = new URL(referer).hostname;
+  // 要求常见浏览器标识
+  const browserPatterns = [
+    /mozilla/i, /chrome/i, /safari/i, /firefox/i, /edge/i, /opera/i
+  ];
 
-    if (!allowedDomains.some(domain => refererDomain.includes(domain))) {
-      return { allowed: false, reason: 'External access not permitted' };
-    }
+  if (!browserPatterns.some(pattern => pattern.test(userAgent))) {
+    return { allowed: false, reason: 'Browser access required' };
+  }
+
+  // 检查是否为AJAX请求(更严格的内部调用验证)
+  const acceptHeader = request.headers.get('accept');
+  if (!acceptHeader || !acceptHeader.includes('application/json')) {
+    return { allowed: false, reason: 'Invalid request format' };
   }
 
   return { allowed: true };
@@ -119,12 +147,12 @@ export async function GET(request: NextRequest) {
       }, { status: 429 });
     }
 
-    // 检查合法访问
-    const accessCheck = checkLegitimateAccess(request);
+    // 检查内部访问
+    const accessCheck = checkInternalAccess(request);
     if (!accessCheck.allowed) {
-      console.log(`Suspicious access from IP: ${ip}, Reason: ${accessCheck.reason}`);
+      console.log(`External API access blocked from IP: ${ip}, Reason: ${accessCheck.reason}`);
       return NextResponse.json({
-        error: 'Access denied'
+        error: 'API access restricted to internal use only'
       }, { status: 403 });
     }
 
