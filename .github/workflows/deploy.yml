@@ -62,7 +62,11 @@ jobs:
 
             # 安装依赖
             echo "📦 Installing dependencies..."
-            npm ci --only=production
+            npm ci
+
+            # 运行数据库迁移
+            echo "🗄️ Running database migration..."
+            npm run migrate
 
             # 构建项目
             echo "🏗️ Building project..."
