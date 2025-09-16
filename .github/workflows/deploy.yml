@@ -84,12 +84,15 @@ jobs:
             echo "🏗️ Building project..."
             NODE_ENV=production npm run build
 
-            # 重启PM2进程（强制清理）
+            # 重启PM2进程（零停机部署）
             echo "🔄 Restarting PM2 process..."
-            pm2 delete game-cms || true
-            pkill -f "/data/www/ggame.ee.*next" || true
-            sleep 2
-            pm2 start npm --name "game-cms" -- start
+            if pm2 list | grep -q "game-cms"; then
+              echo "Reloading existing PM2 process..."
+              pm2 reload game-cms
+            else
+              echo "Starting new PM2 process..."
+              pm2 start npm --name "game-cms" -- start
+            fi
 
             # 保存PM2配置
             pm2 save
