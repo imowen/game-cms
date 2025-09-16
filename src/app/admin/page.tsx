@@ -89,7 +89,11 @@ export default function AdminPage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await fetch('/api/auth/check');
+        const response = await fetch('/api/auth/check', {
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
         setAuthenticated(response.ok);
       } catch (error) {
         setAuthenticated(false);
@@ -108,6 +112,7 @@ export default function AdminPage() {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ password }),
@@ -132,6 +137,7 @@ export default function AdminPage() {
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
         headers: {
+          'Accept': 'application/json',
           'Cache-Control': 'no-cache',
         },
       });
@@ -155,7 +161,13 @@ export default function AdminPage() {
     if (!confirm('确定要删除这个游戏吗？')) return;
     
     try {
-      const response = await fetch(`/api/games/${id}`, { method: 'DELETE' });
+      const response = await fetch(`/api/games/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
       if (response.ok) {
         fetchGames();
       }
@@ -171,6 +183,9 @@ export default function AdminPage() {
     try {
       const response = await fetch('/api/games/import', {
         method: 'POST',
+        headers: {
+          'Accept': 'application/json'
+        },
         body: formData
       });
       
@@ -196,6 +211,7 @@ export default function AdminPage() {
       const response = await fetch('/api/games', {
         method: 'POST',
         headers: {
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(newGame),
@@ -240,6 +256,7 @@ export default function AdminPage() {
       const response = await fetch(`/api/games/${editingGame.id}`, {
         method: 'PUT',
         headers: {
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(editingGame),
