@@ -1,6 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase, Game, generateUniqueSlug } from '@/lib/database';
 
+// 验证管理员身份
+async function verifyAdminAuth(request: NextRequest): Promise<boolean> {
+  try {
+    const token = request.cookies.get('admin-token')?.value;
+
+    if (!token) {
+      return false;
+    }
+
+    const decoded = Buffer.from(token, 'base64').toString();
+    const [user, timestamp] = decoded.split(':');
+
+    if (user === 'woshi404page' && timestamp) {
+      const tokenTime = parseInt(timestamp);
+      const now = Date.now();
+      const maxAge = 60 * 60 * 24 * 1000; // 24小时
+
+      if (now - tokenTime < maxAge) {
+        return true;
+      }
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const db = await getDatabase();
@@ -10,15 +38,32 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const category = searchParams.get('category');
     const search = searchParams.get('search');
-    
+    const requestAdmin = searchParams.get('admin') === 'true';
+
+    // 验证admin权限
+    let isAdmin = false;
+    if (requestAdmin) {
+      isAdmin = await verifyAdminAuth(request);
+
+      // 如果请求admin权限但验证失败，返回401
+      if (!isAdmin) {
+        return NextResponse.json({ error: 'Unauthorized admin access' }, { status: 401 });
+      }
+    }
+
     const offset = (page - 1) * limit;
-    
+
     let query = `
       SELECT g.*, c.name as category_name, c.color as category_color
       FROM games g
       LEFT JOIN categories c ON g.category_id = c.id
-      WHERE g.is_active = 1 AND (g.status = 'published' OR g.status IS NULL)
+      WHERE g.is_active = 1
     `;
+
+    // 如果不是管理后台调用，则只显示已发布的游戏
+    if (!isAdmin) {
+      query += ' AND (g.status = "published" OR g.status IS NULL)';
+    }
     
     const params: (string | number)[] = [];
     
@@ -38,7 +83,13 @@ export async function GET(request: NextRequest) {
     const games = await db.all(query, params);
     
     // 获取总数
-    let countQuery = 'SELECT COUNT(*) as total FROM games WHERE is_active = 1 AND (status = "published" OR status IS NULL)';
+    let countQuery = 'SELECT COUNT(*) as total FROM games WHERE is_active = 1';
+
+    // 如果不是管理后台调用，则只统计已发布的游戏
+    if (!isAdmin) {
+      countQuery += ' AND (status = "published" OR status IS NULL)';
+    }
+
     const countParams: (string | number)[] = [];
     
     if (category) {
@@ -70,6 +121,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // 验证管理员身份
+    const isAuthorized = await verifyAdminAuth(request);
+    if (!isAuthorized) {
+      return NextResponse.json({ error: 'Unauthorized access' }, { status: 401 });
+    }
+
     const db = await getDatabase();
     const game: Game = await request.json();
 

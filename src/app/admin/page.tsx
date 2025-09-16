@@ -38,12 +38,13 @@ export default function AdminPage() {
     try {
       const params = new URLSearchParams({
         page: currentPage.toString(),
-        limit: '50'
+        limit: '50',
+        admin: 'true'  // 管理后台标识，显示所有状态游戏
       });
-      
+
       if (searchTerm) params.set('search', searchTerm);
       if (selectedCategory) params.set('category', selectedCategory);
-      
+
       const response = await fetch(`/api/games?${params}`);
       const data = await response.json();
       
