@@ -79,7 +79,8 @@ function checkInternalAccess(request: NextRequest): { allowed: boolean; reason?:
   const botPatterns = [
     /bot/i, /crawl/i, /spider/i, /scrape/i, /wget/i, /curl/i,
     /python/i, /java/i, /go-http/i, /postman/i, /insomnia/i,
-    /axios/i, /fetch/i, /http/i, /request/i, /client/i
+    /axios/i
+    // 移除 /fetch/i, /http/i, /request/i, /client/i 避免误伤正常浏览器请求
   ];
 
   if (botPatterns.some(pattern => pattern.test(userAgent))) {
@@ -97,7 +98,8 @@ function checkInternalAccess(request: NextRequest): { allowed: boolean; reason?:
 
   // 检查是否为AJAX请求(更严格的内部调用验证)
   const acceptHeader = request.headers.get('accept');
-  if (!acceptHeader || !acceptHeader.includes('application/json')) {
+  // 允许包含 application/json 或者 */* 的请求
+  if (!acceptHeader || (!acceptHeader.includes('application/json') && !acceptHeader.includes('*/*'))) {
     return { allowed: false, reason: 'Invalid request format' };
   }
 
@@ -151,9 +153,38 @@ export async function GET(request: NextRequest) {
     const accessCheck = checkInternalAccess(request);
     if (!accessCheck.allowed) {
       console.log(`External API access blocked from IP: ${ip}, Reason: ${accessCheck.reason}`);
-      return NextResponse.json({
-        error: 'API access restricted to internal use only'
-      }, { status: 403 });
+
+      // 对于管理员请求，检查是否有有效的referer和基本的浏览器特征
+      const referer = request.headers.get('referer');
+      const userAgent = request.headers.get('user-agent');
+      const isAdminRequest = new URL(request.url).searchParams.get('admin') === 'true';
+
+      if (isAdminRequest && referer && userAgent) {
+        try {
+          const refererDomain = new URL(referer).hostname;
+          const allowedDomains = ['ggame.ee', 'localhost'];
+          const isValidReferer = allowedDomains.some(domain =>
+            refererDomain === domain || refererDomain.endsWith('.' + domain)
+          );
+
+          if (isValidReferer && userAgent.includes('Mozilla')) {
+            // 允许管理员请求通过
+            console.log(`Admin request allowed from domain: ${refererDomain}`);
+          } else {
+            return NextResponse.json({
+              error: 'API access restricted to internal use only'
+            }, { status: 403 });
+          }
+        } catch {
+          return NextResponse.json({
+            error: 'API access restricted to internal use only'
+          }, { status: 403 });
+        }
+      } else {
+        return NextResponse.json({
+          error: 'API access restricted to internal use only'
+        }, { status: 403 });
+      }
     }
 
     const db = await getDatabase();

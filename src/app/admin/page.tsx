@@ -45,7 +45,12 @@ export default function AdminPage() {
       if (searchTerm) params.set('search', searchTerm);
       if (selectedCategory) params.set('category', selectedCategory);
 
-      const response = await fetch(`/api/games?${params}`);
+      const response = await fetch(`/api/games?${params}`, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
       const data = await response.json();
       
       setGames(data.games || []);
@@ -59,7 +64,12 @@ export default function AdminPage() {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('/api/categories');
+      const response = await fetch('/api/categories', {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
       const data = await response.json();
       setCategories(data || []);
     } catch (error) {
