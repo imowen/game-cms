@@ -1,0 +1,53 @@
+# Caddy 配置文件 - ggame.ee
+
+ggame.ee {
+    # 反向代理到 Next.js 应用
+    reverse_proxy localhost:3000
+
+    # 启用 gzip 压缩
+    encode gzip
+
+    # 静态文件缓存
+    @static {
+        path *.css *.js *.png *.jpg *.jpeg *.gif *.ico *.svg *.woff *.woff2 *.ttf *.eot
+    }
+    header @static Cache-Control "public, max-age=31536000"
+
+    # 安全头
+    header {
+        # 移除 Server 标识
+        -Server
+        # 防止点击劫持
+        X-Frame-Options "SAMEORIGIN"
+        # 防止 MIME 类型嗅探
+        X-Content-Type-Options "nosniff"
+        # XSS 保护
+        X-XSS-Protection "1; mode=block"
+        # 推荐 HTTPS
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    }
+
+    # 日志记录
+    log {
+        output file /var/log/caddy/game-cms.log
+        format json
+    }
+
+    # 错误页面
+    handle_errors {
+        @5xx expression {http.error.status_code} >= 500
+        handle @5xx {
+            respond "服务器内部错误，请稍后再试" 500
+        }
+    }
+}
+
+# 如果需要 www 重定向
+www.ggame.ee {
+    redir https://ggame.ee{uri} permanent
+}
+
+# 如果只用 IP 访问（开发/测试）
+# :80 {
+#     reverse_proxy localhost:3000
+# }
