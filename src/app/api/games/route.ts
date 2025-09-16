@@ -1,6 +1,81 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase, Game, generateUniqueSlug } from '@/lib/database';
 
+// 防爬虫和频率限制
+const requestLog = new Map<string, { count: number; lastRequest: number; blocked: boolean }>();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1分钟
+const MAX_REQUESTS_PER_WINDOW = 20; // 每分钟最多20次请求
+const BLOCK_DURATION = 10 * 60 * 1000; // 封禁10分钟
+
+function checkRateLimit(ip: string): { allowed: boolean; reason?: string } {
+  const now = Date.now();
+  const userLog = requestLog.get(ip) || { count: 0, lastRequest: 0, blocked: false };
+
+  // 检查是否在封禁期
+  if (userLog.blocked && now - userLog.lastRequest < BLOCK_DURATION) {
+    return { allowed: false, reason: 'IP temporarily blocked due to excessive requests' };
+  }
+
+  // 重置封禁状态
+  if (userLog.blocked && now - userLog.lastRequest >= BLOCK_DURATION) {
+    userLog.blocked = false;
+    userLog.count = 0;
+  }
+
+  // 重置计数窗口
+  if (now - userLog.lastRequest > RATE_LIMIT_WINDOW) {
+    userLog.count = 0;
+  }
+
+  userLog.count++;
+  userLog.lastRequest = now;
+
+  // 检查是否超过限制
+  if (userLog.count > MAX_REQUESTS_PER_WINDOW) {
+    userLog.blocked = true;
+    requestLog.set(ip, userLog);
+    return { allowed: false, reason: 'Rate limit exceeded. Please try again later.' };
+  }
+
+  requestLog.set(ip, userLog);
+  return { allowed: true };
+}
+
+// 检查Referer和User-Agent
+function checkLegitimateAccess(request: NextRequest): { allowed: boolean; reason?: string } {
+  const referer = request.headers.get('referer');
+  const userAgent = request.headers.get('user-agent');
+  const host = request.headers.get('host');
+
+  // 检查User-Agent，阻止明显的爬虫
+  if (!userAgent || userAgent.length < 10) {
+    return { allowed: false, reason: 'Invalid user agent' };
+  }
+
+  // 阻止常见的爬虫User-Agent
+  const botPatterns = [
+    /bot/i, /crawl/i, /spider/i, /scrape/i, /wget/i, /curl/i,
+    /python/i, /java/i, /go-http/i, /postman/i, /insomnia/i
+  ];
+
+  if (botPatterns.some(pattern => pattern.test(userAgent))) {
+    return { allowed: false, reason: 'Automated access detected' };
+  }
+
+  // 对于非本站的referer，进行额外检查
+  if (referer && !referer.includes(host || 'ggame.ee')) {
+    // 允许空referer（直接访问）但限制外站referer
+    const allowedDomains = ['ggame.ee', 'localhost'];
+    const refererDomain = new URL(referer).hostname;
+
+    if (!allowedDomains.some(domain => refererDomain.includes(domain))) {
+      return { allowed: false, reason: 'External access not permitted' };
+    }
+  }
+
+  return { allowed: true };
+}
+
 // 验证管理员身份
 async function verifyAdminAuth(request: NextRequest): Promise<boolean> {
   try {
@@ -31,11 +106,33 @@ async function verifyAdminAuth(request: NextRequest): Promise<boolean> {
 
 export async function GET(request: NextRequest) {
   try {
+    // 获取客户端IP
+    const forwarded = request.headers.get('x-forwarded-for');
+    const ip = forwarded ? forwarded.split(',')[0] : request.headers.get('x-real-ip') || 'unknown';
+
+    // 检查频率限制
+    const rateLimitCheck = checkRateLimit(ip);
+    if (!rateLimitCheck.allowed) {
+      console.log(`Rate limit exceeded for IP: ${ip}`);
+      return NextResponse.json({
+        error: rateLimitCheck.reason
+      }, { status: 429 });
+    }
+
+    // 检查合法访问
+    const accessCheck = checkLegitimateAccess(request);
+    if (!accessCheck.allowed) {
+      console.log(`Suspicious access from IP: ${ip}, Reason: ${accessCheck.reason}`);
+      return NextResponse.json({
+        error: 'Access denied'
+      }, { status: 403 });
+    }
+
     const db = await getDatabase();
     const { searchParams } = new URL(request.url);
-    
+
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const limit = Math.min(parseInt(searchParams.get('limit') || '12'), 50); // 限制最大50条
     const category = searchParams.get('category');
     const search = searchParams.get('search');
     const requestAdmin = searchParams.get('admin') === 'true';
@@ -121,6 +218,19 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // 获取客户端IP
+    const forwarded = request.headers.get('x-forwarded-for');
+    const ip = forwarded ? forwarded.split(',')[0] : request.headers.get('x-real-ip') || 'unknown';
+
+    // 检查频率限制
+    const rateLimitCheck = checkRateLimit(ip);
+    if (!rateLimitCheck.allowed) {
+      console.log(`Rate limit exceeded for IP: ${ip}`);
+      return NextResponse.json({
+        error: rateLimitCheck.reason
+      }, { status: 429 });
+    }
+
     // 验证管理员身份
     const isAuthorized = await verifyAdminAuth(request);
     if (!isAuthorized) {
