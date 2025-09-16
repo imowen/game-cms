@@ -119,17 +119,23 @@ export default function AdminPage() {
     try {
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
       });
 
       if (response.ok) {
         setAuthenticated(false);
         setPassword('');
+        // 强制刷新页面以清除所有缓存
+        window.location.reload();
       }
     } catch (error) {
       console.error('Logout error:', error);
-      // 即使请求失败，也清除本地状态
+      // 即使请求失败，也清除本地状态并刷新页面
       setAuthenticated(false);
       setPassword('');
+      window.location.reload();
     }
   };
 

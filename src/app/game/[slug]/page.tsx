@@ -128,105 +128,8 @@ export default function GamePage({ params }: { params: Promise<{ slug: string }>
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Game Info Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="game-card p-6 sticky top-24">
-              <div className="aspect-square bg-gradient-to-br from-orange-50 to-pink-50 rounded-xl mb-4 overflow-hidden relative">
-                <img
-                  src={game.thumbnail_url || '/placeholder-game.svg'}
-                  alt={game.name}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute top-3 left-3">
-                  <div className="w-3 h-3 bg-green-400 rounded-full"></div>
-                </div>
-              </div>
-
-              <h2 className="text-xl font-bold text-gray-800 mb-4 text-center">
-                🎮 {game.name}
-              </h2>
-              
-              <div className="space-y-4">
-                {game.category_name && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">🎯 分类</span>
-                    <span
-                      className="game-badge text-xs"
-                      style={{
-                        background: `linear-gradient(135deg, ${game.category_color}, ${game.category_color}dd)`
-                      }}
-                    >
-                      {game.category_name === '动作' && '⚔️ '}
-                      {game.category_name === '益智' && '🧩 '}
-                      {game.category_name === '跑酷' && '🏃 '}
-                      {game.category_name === '射击' && '🎯 '}
-                      {game.category_name === '休闲' && '🎲 '}
-                      {game.category_name}
-                    </span>
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-600">📐 尺寸</span>
-                  <span className="text-sm text-orange-600 font-bold">
-                    {game.size_width} × {game.size_height}
-                  </span>
-                </div>
-
-                {game.platform && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">💻 平台</span>
-                    <span className="text-sm text-orange-600 font-bold">
-                      {game.platform}
-                    </span>
-                  </div>
-                )}
-
-                {game.rating > 0 && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">⭐ 评分</span>
-                    <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs px-3 py-1.5 rounded-full font-bold">
-                      {game.rating.toFixed(1)} ⭐
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-600">🆔 ID</span>
-                  <span className="text-xs text-orange-600 font-mono bg-orange-50 px-2 py-1 rounded-lg">
-                    #{game.id}
-                  </span>
-                </div>
-
-                {game.namespace && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">📦 命名空间</span>
-                    <span className="text-xs text-gray-600 font-mono glass-effect px-2 py-1 rounded-lg">
-                      {game.namespace}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-6 pt-4 border-t border-orange-100">
-                <button
-                  onClick={() => {
-                    const gameFrame = document.getElementById('game-frame') as HTMLIFrameElement;
-                    if (gameFrame) {
-                      gameFrame.src = gameFrame.src; // Reload the game
-                    }
-                  }}
-                  className="candy-button w-full"
-                >
-                  🔄 重新加载游戏
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Game Frame */}
-          <div className="lg:col-span-3">
+        {/* Game Frame - Full Width */}
+        <div>
             <div className="game-card p-3 sm:p-6">
               <div className="mb-6">
                 <h3 className="text-2xl font-bold text-gradient mb-3">
@@ -286,17 +189,30 @@ export default function GamePage({ params }: { params: Promise<{ slug: string }>
                 <div className="text-sm text-orange-500 font-medium">
                   💡 如果游戏无法加载，请检查网络连接或联系管理员
                 </div>
-                <button
-                  onClick={() => {
-                    const gameFrame = document.getElementById('game-frame') as HTMLIFrameElement;
-                    if (gameFrame.requestFullscreen) {
-                      gameFrame.requestFullscreen();
-                    }
-                  }}
-                  className="candy-button text-sm px-4 py-2"
-                >
-                  🔍 全屏
-                </button>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      const gameFrame = document.getElementById('game-frame') as HTMLIFrameElement;
+                      if (gameFrame) {
+                        gameFrame.src = gameFrame.src; // Reload the game
+                      }
+                    }}
+                    className="candy-button text-sm px-4 py-2"
+                  >
+                    🔄 重新加载
+                  </button>
+                  <button
+                    onClick={() => {
+                      const gameFrame = document.getElementById('game-frame') as HTMLIFrameElement;
+                      if (gameFrame.requestFullscreen) {
+                        gameFrame.requestFullscreen();
+                      }
+                    }}
+                    className="candy-button text-sm px-4 py-2"
+                  >
+                    🔍 全屏
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -381,7 +297,6 @@ export default function GamePage({ params }: { params: Promise<{ slug: string }>
                 </div>
               </div>
             )}
-          </div>
         </div>
       </div>
       </div>
